@@ -16,14 +16,16 @@
 # limitations under the License.
 #
 #
+
 from solr import Solr
 from flask import Flask
 import pandas as pd
 from vector import Vector
 from sklearn.cluster import KMeans
-import requests, json, os
+import requests, json, os, operator
 
 solrURL = "http://localhost:8983/solr/electronicsimagecatdev"
+# DHS
 solrInstance = Solr(solrURL)
 app = Flask(__name__)
 
@@ -39,42 +41,64 @@ def computeJaccard():
         union_feature_names = set(luke["fields"].keys())
         total_num_features = len(union_feature_names)
 
-        docs = solrInstance.query_iterator(query="*:*", start=0)
+        docs = solrInstance.query_iterator(query="*:*", start=0, limit=100)
 
+        bufferDocs = []
         for doc in docs:
             overlap = set(doc.keys()) & set(union_feature_names)
             doc["jaccard_abs"] = float(len(overlap)) / total_num_features
-            yield doc
-    #perform atomic updates, sort=metadataScore in kwargs payload
 
-def clusterScores():
+            bufferDocs.append(doc) #yield doc
 
-    threshold = 0.01
+        bufferDocs.sort(key=operator.itemgetter('jaccard_abs'), reverse=True)
+        return bufferDocs
 
-    # sort json
+    # perform atomic updates,
+    # query Solr with sort="metadataScore" in kwargs payload
 
-    # generator iterate only once
-
-    cluster_dict = {}
-    i = 0
-    for doc in computeJaccard():
-        i += 1
 
 # hit the REST endpoint to choose your distance metric
 @app.route('/jaccardKey')
 def jaccard():
 
+    threshold = 0.01
+    docs = computeJaccard()
+    prior = docs[0]["jaccard_abs"]
 
+    json_data = {"name": "clusters"}
 
-    json_response = {}
-
-    '''
-    node = { "metadata": json.dumps(doc),
-                     "name": doc['id'].split('/')[-1],
-                     "path": doc[],
-                     "score": os.environ["S"]
+    cluster0 = { "name": "cluster0",
+                 "children": [docs[0]]
     }
-    '''
+
+    clusters = [cluster0]
+    clusterCount = 0
+
+    for i in range(1, len(docs)):
+
+        node = { "metadata": json.dumps(docs[i]),
+                 "name": docs[i]['id'].split('/')[-1],
+                 "path": os.environ["IMAGE_MOUNT"] + docs[i]['id'].split('/')[-1],
+                 "score": docs[i]["jaccard_abs"]
+        }
+
+        diff = prior - docs[i]["jaccard_abs"]
+
+        if diff < threshold:
+            clusters[clusterCount]["children"].append(node)
+        else:
+            clusterCount += 1
+            newCluster = { "name": "cluster"+str(clusterCount),
+                           "children": [docs[i]]
+            }
+            clusters.append(newCluster)
+
+        prior = docs[i]["jaccard_abs"]
+
+    json_data["children"] = clusters
+
+    return json.dumps(json_data)
+
 
 
 @app.route('/kmeans/<int:kval>')
@@ -98,7 +122,7 @@ def sk_kmeans(kval):
 
     labels = kmeans.fit_predict(df)
 
-    return labels
+    return str(labels)
 
 
 

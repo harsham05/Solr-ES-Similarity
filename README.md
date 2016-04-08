@@ -12,7 +12,7 @@ python -m SimpleHTTPServer
 ```
 export SOLR_PREFIX=/data/memex/electronics-images/
 
-export IMAGE_MOUNT=http://localhost:8000/
+export IMAGE_MOUNT=http://localhost:8000/electronics-images/
 
 ```
 
@@ -21,5 +21,10 @@ export IMAGE_MOUNT=http://localhost:8000/
 python solr-similarity.py
 ```
 
+#jaccard
+http://localhost:5000/static/dynamic-cluster.html
+
 #k-means
 http://localhost:5000/kmeans
+
+

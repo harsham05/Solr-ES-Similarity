@@ -68,14 +68,3 @@ class Solr(object):
                 print "Something went wrong when querying solr"
                 print "Solr query params ", payload
                 break
-
-
-
-
-
-
-
-
-
-
-
