@@ -1,4 +1,4 @@
 *.pyc
 *.idea
-*lasticsearch*
-*olr-4.*
+elasticsearch-2.3.1
+solr-4.10.4
