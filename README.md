@@ -1,7 +1,7 @@
 
 # Flask based REST application for Solr Elasticsearch similarity using Jaccard, Edit-distance, Cosine & K-means metrics
 
-1.Mount your raw images
+1.Mount your raw images & Start Solr Instance
 
 ```
 python -m SimpleHTTPServer
