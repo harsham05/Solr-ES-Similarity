@@ -20,7 +20,11 @@
 import math
 
 def stringify(attribute_value):
-    if isinstance(attribute_value, list):
+
+    if isinstance(attribute_value, int):
+        return str(attribute_value)
+
+    elif isinstance(attribute_value, list):
         return str((", ".join(attribute_value)).encode('utf-8').strip())
     else:
         return str(attribute_value.encode('utf-8').strip())
