@@ -19,7 +19,8 @@
 
 from elasticsearch import Elasticsearch
 from tika import parser
-import argparse, os
+from mysolr import Solr
+import argparse, os, requests
 
 def filterFiles(inputDir, acceptTypes):
     filename_list = []
@@ -39,9 +40,43 @@ def filterFiles(inputDir, acceptTypes):
     return filename_list
 
 
-def solrIngest(inputDir, accept):
+def stringify(attribute_value):
+    if isinstance(attribute_value, list):
+        return str((", ".join(attribute_value)).encode('utf-8').strip())
+    else:
+        return str(attribute_value.encode('utf-8').strip())
 
 
+def lazySolr(inputDir, accept):
+
+    for doc in filterFiles(inputDir, accept):
+        parsed = parser.from_file(doc)
+
+        document = { "id": "file:" + os.path.abspath(inputDir) + "/" + str(parsed["metadata"].pop(u"resourceName", None).encode("utf-8")),
+                     "content": parsed["content"]
+        }
+
+        for key in parsed["metadata"]:
+            document[key] = stringify(parsed["metadata"][key])
+
+        yield document
+
+
+def solrIngest(URL, inputDir, accept):
+
+    session = requests.Session()      #session.auth = (os.environ["SOLR_SIM_USER"], os.environ["SOLR_SIM_PASS"])
+    solr = Solr(URL, make_request=session, version=4)
+
+    documents = list(lazySolr(inputDir, accept))
+
+    #print documents
+
+    x = solr.update(documents, commit=True)
+
+    if x.raw_content['responseHeader']['status'] != 0:
+        print "Solr Commit Failed !!!! Error Status code: ", x.raw_content['responseHeader']['status']
+    else:
+        print "Awesome!! Solr Commit was a Success"
 
 
 
@@ -54,7 +89,7 @@ def ingestES(inputDir, accept):
     for doc in filterFiles(inputDir, accept):
 
         parsed = parser.from_file(doc)
-        parsed.pop("resourceName", None)
+        parsed["metadata"].pop(u"resourceName", None)
 
         resp = es.index(index="example1", doc_type="polar", id="file:"+doc, body=parsed)
 
@@ -66,19 +101,17 @@ def ingestES(inputDir, accept):
 
 if __name__ == "__main__":
 
-    argParser = argparse.ArgumentParser('Ingest Documents into Solr 4.10 ES 2.x')
-
-    argParser.add_argument('--type', required=True, help='Solr or Elastic')
-
+    argParser = argparse.ArgumentParser('Ingest Documents into Solr 4.10.4 or ES 2.3.1')
+    argParser.add_argument('--URL', required=True, help='Solr or Elastic Document Store URL ## http://localhost:8983/solr/core1')
     argParser.add_argument('--inputDir', required=True, help='path to directory containing files')
     argParser.add_argument('--accept', nargs='+', type=str, help='Ingest only certain IANA MIME types')
     args = argParser.parse_args()
 
     if args.inputDir:
 
-        if args.type == "Solr":
-            solrIngest(args.inputDir, args.accept)
-
-        elif args.type == "Elastic":
-            ingestES(args.inputDir, args.accept)
-
+        URL = args.URL.rstrip('/') + '/'
+        if "solr" in URL:
+            solrIngest(URL, args.inputDir, args.accept)
+        else:
+            print "Defaulting to Elasticsearch"
+            ingestES(URL, args.inputDir, args.accept)
