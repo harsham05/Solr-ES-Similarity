@@ -39,6 +39,12 @@ def filterFiles(inputDir, acceptTypes):
     return filename_list
 
 
+def solrIngest(inputDir, accept):
+
+
+
+
+
 def ingestES(inputDir, accept):
 
     #intersect_features = set()
@@ -60,12 +66,19 @@ def ingestES(inputDir, accept):
 
 if __name__ == "__main__":
 
-    argParser = argparse.ArgumentParser('Ingest Documents into ES 2.x')
+    argParser = argparse.ArgumentParser('Ingest Documents into Solr 4.10 ES 2.x')
+
+    argParser.add_argument('--type', required=True, help='Solr or Elastic')
+
     argParser.add_argument('--inputDir', required=True, help='path to directory containing files')
     argParser.add_argument('--accept', nargs='+', type=str, help='Ingest only certain IANA MIME types')
     args = argParser.parse_args()
 
     if args.inputDir:
-        ingestES(args.inputDir, args.accept)
 
+        if args.type == "Solr":
+            solrIngest(args.inputDir, args.accept)
+
+        elif args.type == "Elastic":
+            ingestES(args.inputDir, args.accept)
 
