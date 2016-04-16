@@ -19,7 +19,7 @@
 
 from elasticsearch import Elasticsearch
 from tika import parser
-from mysolr import Solr
+from solr import Solr
 import argparse, os, requests
 
 def filterFiles(inputDir, acceptTypes):
@@ -57,27 +57,21 @@ def lazySolr(inputDir, accept):
         }
 
         for key in parsed["metadata"]:
-            document[key] = stringify(parsed["metadata"][key])
+            mappedField = key + "_s_md"
+            document[mappedField] = stringify(parsed["metadata"][key])
 
         yield document
 
 
 def solrIngest(URL, inputDir, accept):
 
-    session = requests.Session()      #session.auth = (os.environ["SOLR_SIM_USER"], os.environ["SOLR_SIM_PASS"])
-    solr = Solr(URL, make_request=session, version=4)
+    solr = Solr(URL)
 
-    documents = list(lazySolr(inputDir, accept))
+    documents = lazySolr(inputDir, accept)
 
-    #print documents
+    count, res = solr.post_iterator(documents, commit=True, buffer_size=100)
 
-    x = solr.update(documents, commit=True)
-
-    if x.raw_content['responseHeader']['status'] != 0:
-        print "Solr Commit Failed !!!! Error Status code: ", x.raw_content['responseHeader']['status']
-    else:
-        print "Awesome!! Solr Commit was a Success"
-
+    print("Res : %s; count=%d" % (res, count))
 
 
 def ingestES(inputDir, accept):
