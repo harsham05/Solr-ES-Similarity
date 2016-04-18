@@ -22,10 +22,11 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 class Solr(object):
     """
-    Solr client for querying docs
+    Solr client for querying, posting and committing docs
     """
 
     def __init__(self, solr_url):
+
         self.update_url = solr_url.rstrip('/') + '/update/json'
         self.query_url = solr_url.rstrip('/') + '/select'
         self.headers = {"content-type": "application/json"}

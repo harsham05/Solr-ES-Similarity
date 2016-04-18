@@ -103,7 +103,6 @@ if __name__ == "__main__":
 
     if args.inputDir:
 
-        URL = args.URL.rstrip('/') + '/'
         if "solr" in URL:
             solrIngest(URL, args.inputDir, args.accept)
         else:
