@@ -46,6 +46,7 @@ def computeJaccard():
         bufferDocs = []
         for doc in docs:
             overlap = set(doc.keys()) & set(union_feature_names)
+            # not performing atomic update to Solr index, just computing scores & clustering
             doc["jaccard_abs"] = float(len(overlap)) / total_num_features
 
             bufferDocs.append(doc) #yield doc
