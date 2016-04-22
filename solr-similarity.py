@@ -30,7 +30,39 @@ solrInstance = Solr(solrURL)
 app = Flask(__name__)
 
 
-def computeJaccard():
+
+def featurizeDoc(doc):
+    """
+        get key : value of metadata
+    """
+    doc_features = []
+    for key in doc:
+        doc_features.append("{0}: {1}".format(key, doc[key]))
+    return doc_features
+
+
+def computeJaccardValue():
+
+    union_feature_values = set()
+    docs = solrInstance.query_iterator(query="*:*", start=0, limit=100)
+    for doc in docs:
+        union_feature_values |= set(featurizeDoc(doc))
+
+    total_num_features = len(union_feature_values)
+    docs = solrInstance.query_iterator(query="*:*", start=0, limit=100)
+    bufferDocs = []
+    for doc in docs:
+
+        overlap =  set(featurizeDoc(doc)) & union_feature_values
+        doc["jaccard_value_abs"] = float(len(overlap)) / total_num_features
+
+        bufferDocs.append(doc)
+
+    bufferDocs.sort(key=operator.itemgetter('jaccard_value_abs'), reverse=True)
+    return bufferDocs
+
+
+def computeJaccardMeta():
 
     lukeURL = "http://{0}/admin/luke?numTerms=0&wt=json".format(solrURL.split("://")[-1].rstrip('/'))
     luke = requests.get(lukeURL)
@@ -47,11 +79,12 @@ def computeJaccard():
         for doc in docs:
             overlap = set(doc.keys()) & set(union_feature_names)
             # not performing atomic update to Solr index, just computing scores & clustering
-            doc["jaccard_abs"] = float(len(overlap)) / total_num_features
+            # no need to map to solr dynamic field
+            doc["jaccard_meta_abs"] = float(len(overlap)) / total_num_features
 
             bufferDocs.append(doc) #yield doc
 
-        bufferDocs.sort(key=operator.itemgetter('jaccard_abs'), reverse=True)
+        bufferDocs.sort(key=operator.itemgetter('jaccard_meta_abs'), reverse=True)
         return bufferDocs
 
     # perform atomic updates,
@@ -59,12 +92,16 @@ def computeJaccard():
 
 
 # hit the REST endpoint to choose your distance metric
-@app.route('/jaccardKey')
-def jaccard():
+@app.route('/jaccard/<string:metric>/<float:threshold>')
+def jaccard(metric, threshold=0.01):
 
-    threshold = 0.01
-    docs = computeJaccard()
-    prior = docs[0]["jaccard_abs"]
+    if metric == "meta":
+        docs = computeJaccardMeta()
+    elif metric == "value":
+        docs = computeJaccardValue()
+
+    prior = docs[0]["jaccard_{0}_abs".format(metric)]
+
 
     json_data = {"name": "clusters"}
 
@@ -123,7 +160,9 @@ def sk_kmeans(kval):
 
     labels = kmeans.fit_predict(df)
 
-    return str(labels)
+    print labels
+
+    #return str(labels)
 
 
 

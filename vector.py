@@ -45,7 +45,7 @@ class Vector:
         if filename and features:
             self.filename = filename
 
-            na_metadata = ["resourceName", "_version_"]
+            na_metadata = ["resourceName", "_version_", "id"]
             for na in na_metadata:
                 features.pop(na, None)
 
