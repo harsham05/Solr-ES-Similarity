@@ -102,7 +102,7 @@ def jaccard(core, metric, threshold=0.01):
 
     json_data = {"name": "clusters", "children": []}
 
-    first_node = { "metadata": json.dumps(docs[0]),
+    prior_node = { "metadata": json.dumps(docs[0]),
                    "name": docs[0]['id'].split('/')[-1],
                     "path": os.environ["IMAGE_MOUNT"] + docs[0]['id'].split('/')[-1].split('.')[0] + ".jpg",
                     "score": docs[0]["jaccard_{0}_abs".format(metric)]
@@ -111,7 +111,7 @@ def jaccard(core, metric, threshold=0.01):
     prior = docs[0]["jaccard_{0}_abs".format(metric)]
 
     cluster0 = { "name": "cluster0",
-                 "children": [first_node]
+                 "children": [prior_node]
     }
 
     clusters = [cluster0]
@@ -132,7 +132,7 @@ def jaccard(core, metric, threshold=0.01):
         else:
             clusterCount += 1
             newCluster = { "name": "cluster"+str(clusterCount),
-                           "children": [docs[i]]
+                           "children": [node]
             }
             clusters.append(newCluster)
 
