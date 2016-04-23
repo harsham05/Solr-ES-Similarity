@@ -155,8 +155,12 @@ def sk_kmeans(core, kval):
     for doc in docs:
         list_of_points.append(Vector(doc['id'], doc))
 
-    df = pd.DataFrame(list_of_points)
+    list_of_Dicts = (point.features for point in list_of_points)
+
+    df = pd.DataFrame(list_of_Dicts)
     df = df.fillna(0)
+
+    print df.shape
 
     kmeans = KMeans(n_clusters=kval,
                 init='k-means++',

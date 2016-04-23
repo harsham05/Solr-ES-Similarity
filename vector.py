@@ -31,15 +31,14 @@ def stringify(attribute_value):
 
 
 class Vector:
-    '''
+    """
     An instance of this class represents a vector in n-dimensional space
-    '''
-    
+    """
     def __init__(self, filename=None, features=None):
-        '''
+        """
         Create a vector
-        @param metadata features 
-        '''
+        @param metadata features
+        """
         self.features = {}
         
         if filename and features:
@@ -70,11 +69,11 @@ class Vector:
 
 
     def dotProduct(self, anotherVector):
-        '''
+        """
         A = ax+by+cz
         B = mx+ny+oz
         A.B = a*m + b*n + c*o
-        '''        
+        """
         dot_product = 0.0
         intersect_features = set(self.features) & set(anotherVector.features)
         
@@ -84,17 +83,17 @@ class Vector:
 
 
     def cosTheta(self, v2):
-        '''
+        """
         cosTheta = (V1.V2) / (|V1| |V2|)
         cos 0 = 1 implies identical documents
-        '''
+        """
         return self.dotProduct(v2) / (self.getMagnitude() * v2.getMagnitude())
 
 
     def euclidean_dist(self, anotherVector):
-        '''
+        """
         dist = ((x1-x2)^2 + (y1-y2)^2 + (z1-z2)^2)^(0.5)
-        '''
+        """
         intersect_features = set(self.features) & set(anotherVector.features)
 
         dist_sum = 0.0
