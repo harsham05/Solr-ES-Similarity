@@ -24,12 +24,7 @@ from vector import Vector
 from sklearn.cluster import KMeans
 import requests, json, os, operator
 
-solrURL = "http://localhost:8983/solr/electronicsimagecatdev"
-# DHS
-solrInstance = Solr(solrURL)
 app = Flask(__name__)
-
-
 
 def featurizeDoc(doc):
     """
@@ -41,15 +36,16 @@ def featurizeDoc(doc):
     return doc_features
 
 
-def computeJaccardValue():
+def computeJaccardValue(solrInstance):
 
     union_feature_values = set()
-    docs = solrInstance.query_iterator(query="*:*", start=0, limit=100)
+    docs = solrInstance.query_iterator(query="*:*", start=0)
     for doc in docs:
         union_feature_values |= set(featurizeDoc(doc))
 
+
     total_num_features = len(union_feature_values)
-    docs = solrInstance.query_iterator(query="*:*", start=0, limit=100)
+    docs = solrInstance.query_iterator(query="*:*", start=0)
     bufferDocs = []
     for doc in docs:
 
@@ -59,10 +55,11 @@ def computeJaccardValue():
         bufferDocs.append(doc)
 
     bufferDocs.sort(key=operator.itemgetter('jaccard_value_abs'), reverse=True)
+
     return bufferDocs
 
 
-def computeJaccardMeta():
+def computeJaccardMeta(solrURL, solrInstance):
 
     lukeURL = "http://{0}/admin/luke?numTerms=0&wt=json".format(solrURL.split("://")[-1].rstrip('/'))
     luke = requests.get(lukeURL)
@@ -73,7 +70,7 @@ def computeJaccardMeta():
         union_feature_names = set(luke["fields"].keys())
         total_num_features = len(union_feature_names)
 
-        docs = solrInstance.query_iterator(query="*:*", start=0, limit=100)
+        docs = solrInstance.query_iterator(query="*:*", start=0)
 
         bufferDocs = []
         for doc in docs:
@@ -92,21 +89,29 @@ def computeJaccardMeta():
 
 
 # hit the REST endpoint to choose your distance metric
-@app.route('/jaccard/<string:metric>/<float:threshold>')
-def jaccard(metric, threshold=0.01):
+@app.route('/<string:core>/jaccard/<string:metric>/<float:threshold>')
+def jaccard(core, metric, threshold=0.01):
+
+    solrURL = "http://localhost:8983/solr/" + core
+    solrInstance = Solr(solrURL)
 
     if metric == "meta":
-        docs = computeJaccardMeta()
+        docs = computeJaccardMeta(solrURL, solrInstance)
     elif metric == "value":
-        docs = computeJaccardValue()
+        docs = computeJaccardValue(solrInstance)
+
+    json_data = {"name": "clusters", "children": []}
+
+    first_node = { "metadata": json.dumps(docs[0]),
+                   "name": docs[0]['id'].split('/')[-1],
+                    "path": os.environ["IMAGE_MOUNT"] + docs[0]['id'].split('/')[-1].split('.')[0] + ".jpg",
+                    "score": docs[0]["jaccard_{0}_abs".format(metric)]
+    }
 
     prior = docs[0]["jaccard_{0}_abs".format(metric)]
 
-
-    json_data = {"name": "clusters"}
-
     cluster0 = { "name": "cluster0",
-                 "children": [docs[0]]
+                 "children": [first_node]
     }
 
     clusters = [cluster0]
@@ -116,13 +121,13 @@ def jaccard(metric, threshold=0.01):
 
         node = { "metadata": json.dumps(docs[i]),
                  "name": docs[i]['id'].split('/')[-1],
-                 "path": os.environ["IMAGE_MOUNT"] + docs[i]['id'].split('/')[-1],
-                 "score": docs[i]["jaccard_abs"]
+                 "path": os.environ["IMAGE_MOUNT"] + docs[i]['id'].split('/')[-1].split('.')[0] + ".jpg",
+                 "score": docs[i]["jaccard_{0}_abs".format(metric)]
         }
 
-        diff = prior - docs[i]["jaccard_abs"]
+        diff = prior - docs[i]["jaccard_{0}_abs".format(metric)]
 
-        if diff < threshold:
+        if diff <= threshold:
             clusters[clusterCount]["children"].append(node)
         else:
             clusterCount += 1
@@ -131,16 +136,18 @@ def jaccard(metric, threshold=0.01):
             }
             clusters.append(newCluster)
 
-        prior = docs[i]["jaccard_abs"]
+        prior = docs[i]["jaccard_{0}_abs".format(metric)]
 
     json_data["children"] = clusters
 
     return json.dumps(json_data)
 
 
+@app.route('/<string:core>/kmeans/<int:kval>')
+def sk_kmeans(core, kval):
 
-@app.route('/kmeans/<int:kval>')
-def sk_kmeans(kval):
+    solrURL = "http://localhost:8983/solr/" + core
+    solrInstance = Solr(solrURL)
 
     list_of_points = []
     docs = solrInstance.query_iterator(query="*:*", start=0)
@@ -160,9 +167,7 @@ def sk_kmeans(kval):
 
     labels = kmeans.fit_predict(df)
 
-    print labels
-
-    #return str(labels)
+    return str(labels)
 
 
 
