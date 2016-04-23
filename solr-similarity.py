@@ -22,6 +22,7 @@ from flask import Flask
 import pandas as pd
 from vector import Vector
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 import requests, json, os, operator
 
 app = Flask(__name__)
@@ -143,8 +144,8 @@ def jaccard(core, metric, threshold=0.01):
     return json.dumps(json_data)
 
 
-@app.route('/<string:core>/kmeans/<int:kval>')
-def sk_kmeans(core, kval):
+@app.route('/<string:core>/kmeans/') #<int:kval>
+def sk_kmeans(core): #, kval=3
 
     solrURL = "http://localhost:8983/solr/" + core
     solrInstance = Solr(solrURL)
@@ -160,19 +161,21 @@ def sk_kmeans(core, kval):
     df = pd.DataFrame(list_of_Dicts)
     df = df.fillna(0)
 
-    print df.shape
+    silhouettes = {}
+    for k in range(2, 10):
 
-    kmeans = KMeans(n_clusters=kval,
-                init='k-means++',
-                max_iter=300,  # k-means convergence
-                n_init=10,  # find global minima
-                n_jobs=-2,  # parallelize
-                )
+        kmeans = KMeans(n_clusters=k,
+                    init='k-means++',
+                    max_iter=300,  # k-means convergence
+                    n_init=10,  # find global minima
+                    n_jobs=-2,  # parallelize
+                    )
 
-    labels = kmeans.fit_predict(df)
+        labels = kmeans.fit_predict(df)
+        silhouettes[k] = silhouette_score(df, labels)
 
-    return str(labels)
 
+    return str(silhouettes)
 
 
 

@@ -74,6 +74,24 @@ def solrIngest(URL, inputDir, accept):
     print("Res : %s; count=%d" % (res, count))
 
 
+def ingestData(dataset):
+
+    exif = {}
+    with open(dataset, "rb") as inF:
+
+        reader = csv.reader(inF)
+
+        for row in reader:
+
+
+
+
+
+
+    solr = Solr
+
+
+
 def ingestES(inputDir, accept):
 
     #intersect_features = set()
@@ -93,18 +111,24 @@ def ingestES(inputDir, accept):
             print "Lost docID: ", doc
 
 
+
+
+
 if __name__ == "__main__":
 
     argParser = argparse.ArgumentParser('Ingest Documents into Solr 4.10.4 or ES 2.3.1')
     argParser.add_argument('--URL', required=True, help='Solr or Elastic Document Store URL ## http://localhost:8983/solr/core1')
     argParser.add_argument('--inputDir', required=True, help='path to directory containing files')
     argParser.add_argument('--accept', nargs='+', type=str, help='Ingest only certain IANA MIME types')
+    parser.add_argument('--dataset', help="ingest RAISE or flickr")
     args = argParser.parse_args()
 
     if args.inputDir:
 
-        if "solr" in URL:
-            solrIngest(URL, args.inputDir, args.accept)
+        if args.dataset: # ingest datasets to Solr
+            ingestData(args.URL, args.inputDir, args.accept, args.dataset)
+        elif "solr" in args.URL:
+            solrIngest(args.URL, args.inputDir, args.accept)
         else:
             print "Defaulting to Elasticsearch"
-            ingestES(URL, args.inputDir, args.accept)
+            ingestES(args.URL, args.inputDir, args.accept)
