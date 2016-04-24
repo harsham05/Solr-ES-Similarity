@@ -20,7 +20,8 @@
 from elasticsearch import Elasticsearch
 from tika import parser
 from solr import Solr
-import argparse, os, requests
+import argparse, os
+import pandas as pd
 
 def filterFiles(inputDir, acceptTypes):
     filename_list = []
@@ -62,33 +63,53 @@ def lazySolr(inputDir, accept):
 
         yield document
 
+def lazyDataset(dataset):
 
-def solrIngest(URL, inputDir, accept):
+    df = pd.read_csv(dataset)
+    df.drop(["NEF", "TIFF", "Keywords"], axis=1, inplace=True)
+    df = df.fillna("")
+
+    columns = list(df.columns)
+    columns.remove("File")
+
+    for index, row in df.iterrows():
+
+        document = { "id": str(row["File"]) }
+
+        for col in columns:
+
+            if row[col] != "":
+                mappedField = key + "_s_md"
+                document[mappedField] = str(row[col]) # map & store metadata field in Solr
+
+        yield document
+
+
+def solrIngest(URL, inputDir=None, dataset=None, accept=None):
 
     solr = Solr(URL)
+    documents = []
 
-    documents = lazySolr(inputDir, accept)
+    if dataset:
+        documents = lazyDataset(dataset)
+
+    elif inputDir:
+        documents = lazySolr(inputDir, accept)
 
     count, res = solr.post_iterator(documents, commit=True, buffer_size=100)
 
     print("Res : %s; count=%d" % (res, count))
 
 
-def ingestData(dataset):
-
-    exif = {}
-    with open(dataset, "rb") as inF:
-
-        reader = csv.reader(inF)
-
-        for row in reader:
 
 
+    """
+        for elem in row:
+        filename = row.pop(0)
+        exif[filename] = row
+    """
 
 
-
-
-    solr = Solr
 
 
 
@@ -96,7 +117,6 @@ def ingestES(inputDir, accept):
 
     #intersect_features = set()
     # has to be done thru querying ES efficiently filter queries?
-
     es = Elasticsearch()
     for doc in filterFiles(inputDir, accept):
 
@@ -113,22 +133,21 @@ def ingestES(inputDir, accept):
 
 
 
-
 if __name__ == "__main__":
 
     argParser = argparse.ArgumentParser('Ingest Documents into Solr 4.10.4 or ES 2.3.1')
     argParser.add_argument('--URL', required=True, help='Solr or Elastic Document Store URL ## http://localhost:8983/solr/core1')
-    argParser.add_argument('--inputDir', required=True, help='path to directory containing files')
+    argParser.add_argument('--inputDir', help='path to directory containing files')
+    argParser.add_argument('--dataset', help="path to ingest RAISE or flickr EXIF file")
     argParser.add_argument('--accept', nargs='+', type=str, help='Ingest only certain IANA MIME types')
-    parser.add_argument('--dataset', help="ingest RAISE or flickr")
     args = argParser.parse_args()
 
-    if args.inputDir:
+    if args.dataset:
+        solrIngest(args.URL, args.dataset)
 
-        if args.dataset: # ingest datasets to Solr
-            ingestData(args.URL, args.inputDir, args.accept, args.dataset)
-        elif "solr" in args.URL:
+    elif args.inputDir:
+        if "solr" in args.URL:
             solrIngest(args.URL, args.inputDir, args.accept)
         else:
             print "Defaulting to Elasticsearch"
-            ingestES(args.URL, args.inputDir, args.accept)
+            #ingestES(args.URL, args.inputDir, args.accept)
