@@ -37,7 +37,7 @@ http://localhost:5000/static/dynamic-cluster-kmeans.html
 ###Thresholding
 
 **Try** to cluster pairwise similarity scores (based on Jaccard(wrt Golden Feature Set), Edit, Cosine distance)
-by setting a threhhold value
+by setting a threshold value
 
 Number of clusters that will be found is Not known Apriori
 
@@ -51,10 +51,10 @@ using Euclidean distance.
 
 Specify the number of clusters to find Apriori
 
-######k-means clustering for absolute distance metrics
+1.**k-means clustering for absolute distance scores**
 
 Applicable D3 Viz = dynamic cluster
 
-######shared Nearest Neigbor clustering for pairwise similarity scores
+2.**shared Nearest Neigbor clustering for pairwise similarity scores**
 
 Applicable D3 Viz = dynamic cluster, circlepacking with tooltips
