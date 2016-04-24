@@ -21,6 +21,7 @@ cd /path/to/Solr-ES-Similarity
 python solr-similarity.py
 ```
 
+
 4.Open the concerning D3 Viz REST endpoints in your browser
 
 ####Jaccard Metadata Key
@@ -31,3 +32,29 @@ http://localhost:5000/static/dynamic-cluster-value.html
 
 ####k-means
 http://localhost:5000/static/dynamic-cluster-kmeans.html
+
+
+###Thresholding
+
+**Try** to cluster pairwise similarity scores (based on Jaccard(wrt Golden Feature Set), Edit, Cosine distance)
+by setting a threhhold value
+
+Number of clusters that will be found is Not known Apriori
+
+Applicable D3 Viz = dynamic cluster, circlepacking
+
+
+###Clustering
+
+Using a metadata feature, such as string length, Cluster documents represented in N dimensional feature space as Vectors
+using Euclidean distance.
+
+Specify the number of clusters to find Apriori
+
+######k-means clustering for absolute distance metrics
+
+Applicable D3 Viz = dynamic cluster
+
+######shared Nearest Neigbor clustering for pairwise similarity scores
+
+Applicable D3 Viz = dynamic cluster, circlepacking with tooltips
