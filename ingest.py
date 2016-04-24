@@ -44,8 +44,10 @@ def filterFiles(inputDir, acceptTypes):
 def stringify(attribute_value):
     if isinstance(attribute_value, list):
         return str((", ".join(attribute_value)).encode('utf-8').strip())
+    elif isinstance(attribute_value, int) or isinstance(attribute_value, float):
+        return str(attribute_value)
     else:
-        return str(attribute_value.encode('utf-8').strip())
+        return str(attribute_value.strip())
 
 
 def lazySolr(inputDir, accept):
@@ -59,7 +61,10 @@ def lazySolr(inputDir, accept):
 
         for key in parsed["metadata"]:
             mappedField = key + "_s_md"
-            document[mappedField] = stringify(parsed["metadata"][key])
+
+            value = stringify(parsed["metadata"][key])
+            if value:
+                document[mappedField] = value
 
         yield document
 
@@ -74,25 +79,25 @@ def lazyDataset(dataset):
 
     for index, row in df.iterrows():
 
-        document = { "id": str(row["File"]) }
+        document = { "id": str(row["File"].encode("utf-8")) }
 
         for col in columns:
+            mappedField = col + "_s_md"
 
-            if row[col] != "":
-                mappedField = key + "_s_md"
-                document[mappedField] = str(row[col]) # map & store metadata field in Solr
+            value = stringify(row[col])
+            if value:
+                document[mappedField] = value  # map & store metadata field in Solr
 
         yield document
 
 
-def solrIngest(URL, inputDir=None, dataset=None, accept=None):
+def solrIngest(URL, dataset=None, inputDir=None, accept=None):
 
     solr = Solr(URL)
     documents = []
 
     if dataset:
         documents = lazyDataset(dataset)
-
     elif inputDir:
         documents = lazySolr(inputDir, accept)
 
@@ -100,19 +105,27 @@ def solrIngest(URL, inputDir=None, dataset=None, accept=None):
 
     print("Res : %s; count=%d" % (res, count))
 
+if __name__ == "__main__":
+
+    argParser = argparse.ArgumentParser('Ingest Documents into Solr 4.10.4 or ES 2.3.1')
+    argParser.add_argument('--URL', required=True, help='Solr or Elastic Document Store URL ## http://localhost:8983/solr/core1')
+    argParser.add_argument('--inputDir', help='path to directory containing files')
+    argParser.add_argument('--dataset', help="path to ingest RAISE or flickr EXIF file")
+    argParser.add_argument('--accept', nargs='+', type=str, help='Ingest only certain IANA MIME types')
+    args = argParser.parse_args()
+
+    if args.dataset:
+        solrIngest(args.URL, args.dataset)
+
+    elif args.inputDir:
+        if "solr" in args.URL:
+            solrIngest(args.URL, "", args.inputDir, args.accept)
+        else:
+            print "Defaulting to Elasticsearch"
+            #ingestES(args.URL, args.inputDir, args.accept)
 
 
-
-    """
-        for elem in row:
-        filename = row.pop(0)
-        exif[filename] = row
-    """
-
-
-
-
-
+"""
 def ingestES(inputDir, accept):
 
     #intersect_features = set()
@@ -129,25 +142,4 @@ def ingestES(inputDir, accept):
             continue
         else:
             print "Lost docID: ", doc
-
-
-
-
-if __name__ == "__main__":
-
-    argParser = argparse.ArgumentParser('Ingest Documents into Solr 4.10.4 or ES 2.3.1')
-    argParser.add_argument('--URL', required=True, help='Solr or Elastic Document Store URL ## http://localhost:8983/solr/core1')
-    argParser.add_argument('--inputDir', help='path to directory containing files')
-    argParser.add_argument('--dataset', help="path to ingest RAISE or flickr EXIF file")
-    argParser.add_argument('--accept', nargs='+', type=str, help='Ingest only certain IANA MIME types')
-    args = argParser.parse_args()
-
-    if args.dataset:
-        solrIngest(args.URL, args.dataset)
-
-    elif args.inputDir:
-        if "solr" in args.URL:
-            solrIngest(args.URL, args.inputDir, args.accept)
-        else:
-            print "Defaulting to Elasticsearch"
-            #ingestES(args.URL, args.inputDir, args.accept)
+"""
