@@ -90,7 +90,7 @@ def computeJaccardMeta(solrURL, solrInstance):
 
 
 # hit the REST endpoint to choose your distance metric
-@app.route('/<string:core>/jaccard/<string:metric>/<float:threshold>')
+@app.route('/<string:core>/threshold/jaccard/<string:metric>/<float:threshold>')
 def jaccard(core, metric, threshold=0.01):
 
     solrURL = "http://localhost:8983/solr/" + core
@@ -144,7 +144,7 @@ def jaccard(core, metric, threshold=0.01):
     return json.dumps(json_data)
 
 
-@app.route('/<string:core>/kmeans/') #<int:kval>
+@app.route('/<string:core>/cluster/kmeans/') #<int:kval>
 def sk_kmeans(core): #, kval=3
 
     solrURL = "http://localhost:8983/solr/" + core
