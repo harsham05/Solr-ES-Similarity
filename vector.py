@@ -68,6 +68,10 @@ class Vector:
         return math.sqrt(totalMagnitude)
 
 
+    def getMagnitude2(self):
+        return math.sqrt(self.dotProduct(self))
+
+
     def dotProduct(self, anotherVector):
         """
         A = ax+by+cz
